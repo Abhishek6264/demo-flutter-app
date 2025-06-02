@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:collection/collection.dart'; // Import for firstWhereOrNull
 import '../models/article.dart';
 
 class BookmarkService {
@@ -19,18 +20,21 @@ class BookmarkService {
 
   Future<bool> isBookmarked(Article article) async {
     final bookmarks = await getBookmarks();
-    return bookmarks.any((a) => a.url == article.url);
+    return bookmarks.firstWhereOrNull((a) => a.url == article.url) != null;
   }
 
   Future<void> toggleBookmark(Article article) async {
     final bookmarks = await getBookmarks();
-    final exists = bookmarks.any((a) => a.url == article.url);
+    final existingArticle = bookmarks.firstWhereOrNull(
+      (a) => a.url == article.url,
+    );
 
-    if (exists) {
-      final updated = bookmarks.where((a) => a.url != article.url).toList();
-      await saveBookmarks(updated);
+    if (existingArticle != null) {
+      bookmarks.remove(existingArticle);
     } else {
-      await saveBookmarks([...bookmarks, article]);
+      bookmarks.add(article);
     }
+
+    await saveBookmarks(bookmarks);
   }
 }

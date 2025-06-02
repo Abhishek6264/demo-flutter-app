@@ -11,6 +11,7 @@ class BookmarksScreen extends StatefulWidget {
 }
 
 class _BookmarksScreenState extends State<BookmarksScreen> {
+  bool isLoading = false; // Added isLoading state
   List<Article> bookmarks = [];
 
   @override
@@ -19,10 +20,15 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
     _loadBookmarks();
   }
 
-  Future<void> _loadBookmarks() async {
-    final loaded = await BookmarkService().getBookmarks();
+  void _loadBookmarks() async {
     setState(() {
-      bookmarks = loaded;
+      isLoading = true; // Start loading
+    });
+
+    bookmarks = await BookmarkService().getBookmarks();
+
+    setState(() {
+      isLoading = false; // Stop loading
     });
   }
 
@@ -31,7 +37,11 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Bookmarked Articles')),
       body:
-          bookmarks.isEmpty
+          isLoading
+              ? Center(
+                child: CircularProgressIndicator(),
+              ) // Showing loader while loading
+              : bookmarks.isEmpty
               ? Center(child: Text('No bookmarks yet.'))
               : ListView.builder(
                 padding: EdgeInsets.all(8),
@@ -52,7 +62,8 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                           context,
                           MaterialPageRoute(
                             builder:
-                                (_) => ArticleDetailScreen(article: article),
+                                (context) =>
+                                    ArticleDetailScreen(article: article),
                           ),
                         );
                       },

@@ -16,6 +16,7 @@ class ArticleDetailScreen extends StatefulWidget {
 
 class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
   bool isBookmarked = false;
+  bool isLoading = false; // Add isLoading state
 
   @override
   void initState() {
@@ -24,17 +25,29 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
   }
 
   void _checkIfBookmarked() async {
+    setState(() {
+      isLoading = true; // Start loading
+    });
+
     final result = await BookmarkService().isBookmarked(widget.article);
+
     setState(() {
       isBookmarked = result;
+      isLoading = false; // Stop loading
     });
   }
 
   void _toggleBookmark() async {
+    setState(() {
+      isLoading = true; // Start loading
+    });
+
     await BookmarkService().toggleBookmark(widget.article);
     final updatedStatus = await BookmarkService().isBookmarked(widget.article);
+
     setState(() {
       isBookmarked = updatedStatus;
+      isLoading = false; // Stop loading
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -50,10 +63,16 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
       appBar: AppBar(
         title: Text(widget.article.title),
         actions: [
-          IconButton(
-            icon: Icon(isBookmarked ? Icons.bookmark : Icons.bookmark_border),
-            onPressed: _toggleBookmark,
-          ),
+          isLoading
+              ? Center(
+                child: CircularProgressIndicator(),
+              ) // Show loader while loading
+              : IconButton(
+                icon: Icon(
+                  isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                ),
+                onPressed: _toggleBookmark,
+              ),
         ],
       ),
       body: Padding(

@@ -15,7 +15,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late Future<List<Article>> _articlesFuture;
-  String? selectedCategory = 'general'; // Default category
+  String? selectedCategory = 'general';
+  bool isLoading = false; // New state
 
   final List<String> categories = [
     'general',
@@ -35,10 +36,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _loadArticles({String? query}) {
     setState(() {
-      _articlesFuture = NewsApiService().fetchTopHeadlines(
-        category: selectedCategory,
-        query: query,
-      );
+      isLoading = true; //  Show spinner immediately
+      _articlesFuture = NewsApiService()
+          .fetchTopHeadlines(category: selectedCategory, query: query)
+          .whenComplete(() {
+            if (mounted) setState(() => isLoading = false); // Hide after fetch
+          });
     });
   }
 
@@ -56,7 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
           style: const TextStyle(color: Colors.white),
           textInputAction: TextInputAction.search,
           onSubmitted: (value) {
-            selectedCategory = null; // Clear category filter
+            selectedCategory = null;
             _loadArticles(query: value);
           },
         ),
@@ -71,7 +74,6 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
         ],
-
         backgroundColor: Colors.blue,
       ),
 
@@ -102,6 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     onSelected: (_) {
                       setState(() {
                         selectedCategory = category;
+                        _searchController.clear(); // clear search
                         _loadArticles();
                       });
                     },
@@ -112,28 +115,29 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 8),
 
             // Display Articles
-            Expanded(
-              child: FutureBuilder<List<Article>>(
-                future: _articlesFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  } else if (snapshot.hasError) {
-                    return Center(child: Text("Error: ${snapshot.error}"));
-                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Center(child: Text("No articles found."));
-                  } else {
-                    final articles = snapshot.data!;
-                    return ListView.builder(
-                      itemCount: articles.length,
-                      itemBuilder:
-                          (context, index) =>
-                              ArticleCard(article: articles[index]),
-                    );
-                  }
-                },
+            if (isLoading)
+              const Expanded(child: Center(child: CircularProgressIndicator()))
+            else
+              Expanded(
+                child: FutureBuilder<List<Article>>(
+                  future: _articlesFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return Center(child: Text("Error: ${snapshot.error}"));
+                    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return const Center(child: Text("No articles found."));
+                    } else {
+                      final articles = snapshot.data!;
+                      return ListView.builder(
+                        itemCount: articles.length,
+                        itemBuilder:
+                            (context, index) =>
+                                ArticleCard(article: articles[index]),
+                      );
+                    }
+                  },
+                ),
               ),
-            ),
           ],
         ),
       ),
